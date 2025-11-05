@@ -1,0 +1,173 @@
+-- sql/sp_reportes_buses.sql
+--
+-- Ejecuta este archivo en tu base de datos `db_buses`
+-- Contiene los 5 procedimientos almacenados para los reportes
+-- solicitados en REPORTES.pdf
+
+USE db_buses;
+
+DELIMITER $$
+
+-- 1) Lista de personas (pasajeros y tripulantes) en un viaje dado.
+--    Datos de entrada: Ruta (origen, destino), turno (fecha y hora partida).
+CREATE PROCEDURE sp_reporte_pasajeros_tripulantes(
+    IN p_origen VARCHAR(100),
+    IN p_destino VARCHAR(100),
+    IN p_fecha_partida DATETIME
+)
+BEGIN
+    DECLARE v_id_viaje INT;
+    DECLARE v_id_conductor INT;
+    DECLARE v_id_copiloto INT;
+
+    -- Encontrar el viaje
+    SELECT v.id_viaje, v.id_conductor, v.id_copiloto
+    INTO v_id_viaje, v_id_conductor, v_id_copiloto
+    FROM viajes v
+    JOIN rutas r ON v.id_ruta = r.id_ruta
+    WHERE r.origen = p_origen
+      AND r.destino = p_destino
+      AND v.fecha_salida = p_fecha_partida
+    LIMIT 1;
+
+    -- Reporte
+    -- 1. Pasajeros
+    SELECT 
+        'Pasajero' as Tipo,
+        u.nombre,
+        u.apellidos,
+        u.dni,
+        u.telefono,
+        a.numero_asiento,
+        a.piso
+    FROM reservas res
+    JOIN usuarios u ON res.id_usuario = u.id_usuario
+    JOIN asientos a ON res.id_asiento = a.id_asiento
+    JOIN pagos p ON res.id_reserva = p.id_reserva
+    WHERE res.id_viaje = v_id_viaje
+      AND res.estado = 'confirmada'
+      AND p.estado = 'completado'
+
+    UNION
+
+    -- 2. Tripulantes
+    SELECT 
+        tip.nombre_tipo as Tipo,
+        u.nombre,
+        u.apellidos,
+        u.dni,
+        u.telefono,
+        NULL as numero_asiento,
+        NULL as piso
+    FROM trabajadores t
+    JOIN usuarios u ON t.id_usuario = u.id_usuario
+    JOIN tipos_trabajador tip ON t.id_tipo = tip.id_tipo
+    WHERE t.id_trabajador IN (v_id_conductor, v_id_copiloto);
+
+END$$
+
+
+-- 2) Cantidad de asientos comprados vía online
+--    (Asumiremos que 'online' son todas las ventas confirmadas)
+CREATE PROCEDURE sp_reporte_asientos_online(
+    IN p_origen VARCHAR(100),
+    IN p_destino VARCHAR(100),
+    IN p_fecha_partida DATETIME
+)
+BEGIN
+    DECLARE v_id_viaje INT;
+
+    SELECT v.id_viaje INTO v_id_viaje
+    FROM viajes v
+    JOIN rutas r ON v.id_ruta = r.id_ruta
+    WHERE r.origen = p_origen
+      AND r.destino = p_destino
+      AND v.fecha_salida = p_fecha_partida
+    LIMIT 1;
+
+    SELECT 
+        COUNT(res.id_reserva) as 'AsientosCompradosOnline'
+    FROM reservas res
+    JOIN pagos p ON res.id_reserva = p.id_reserva
+    WHERE res.id_viaje = v_id_viaje
+      AND res.estado = 'confirmada'
+      AND p.estado = 'completado';
+    -- Nota: Para diferenciar online/presencial, necesitarías una columna extra
+    -- en la tabla 'pagos' o 'reservas' (ej: 'canal_venta' ENUM('online', 'presencial')).
+    -- Por ahora, este SP cuenta TODAS las ventas confirmadas.
+END$$
+
+
+-- 3) Cantidad de asientos comprados vía presencial
+CREATE PROCEDURE sp_reporte_asientos_presencial(
+    IN p_origen VARCHAR(100),
+    IN p_destino VARCHAR(100),
+    IN p_fecha_partida DATETIME
+)
+BEGIN
+    -- Como se mencionó en el SP anterior, no hay forma en la BD actual
+    -- de diferenciar online vs presencial.
+    -- Este SP devolverá 0 hasta que se añada esa lógica.
+    SELECT 0 as 'AsientosCompradosPresencial';
+END$$
+
+
+-- 4) Monto de venta de asientos agrupados por pisos
+CREATE PROCEDURE sp_reporte_monto_por_piso(
+    IN p_origen VARCHAR(100),
+    IN p_destino VARCHAR(100),
+    IN p_fecha_partida DATETIME
+)
+BEGIN
+    DECLARE v_id_viaje INT;
+
+    SELECT v.id_viaje INTO v_id_viaje
+    FROM viajes v
+    JOIN rutas r ON v.id_ruta = r.id_ruta
+    WHERE r.origen = p_origen
+      AND r.destino = p_destino
+      AND v.fecha_salida = p_fecha_partida
+    LIMIT 1;
+
+    SELECT
+        a.piso,
+        SUM(res.precio_final) as MontoTotal
+    FROM reservas res
+    JOIN pagos p ON res.id_reserva = p.id_reserva
+    JOIN asientos a ON res.id_asiento = a.id_asiento
+    WHERE res.id_viaje = v_id_viaje
+      AND res.estado = 'confirmada'
+      AND p.estado = 'completado'
+    GROUP BY a.piso
+    ORDER BY a.piso;
+END$$
+
+
+-- 5) Lista de viajes que vendieron asientos más del 80% de capacidad
+--    para una fecha dada.
+CREATE PROCEDURE sp_reporte_viajes_alta_ocupacion(
+    IN p_fecha_partida_dia DATE
+)
+BEGIN
+    SELECT 
+        r.origen,
+        r.destino,
+        v.fecha_salida,
+        b.capacidad_piso1,
+        b.capacidad_piso2,
+        (b.capacidad_piso1 + IFNULL(b.capacidad_piso2, 0)) as CapacidadTotal,
+        COUNT(res.id_reserva) as AsientosVendidos,
+        (COUNT(res.id_reserva) * 100.0 / (b.capacidad_piso1 + IFNULL(b.capacidad_piso2, 0))) as PorcentajeOcupacion
+    FROM viajes v
+    JOIN rutas r ON v.id_ruta = r.id_ruta
+    JOIN buses b ON v.id_bus = b.id_bus
+    LEFT JOIN reservas res ON v.id_viaje = res.id_viaje 
+                           AND res.estado = 'confirmada' 
+                           AND (SELECT COUNT(*) FROM pagos p WHERE p.id_reserva = res.id_reserva AND p.estado = 'completado') > 0
+    WHERE DATE(v.fecha_salida) = p_fecha_partida_dia
+    GROUP BY v.id_viaje, r.origen, r.destino, v.fecha_salida, b.capacidad_piso1, b.capacidad_piso2
+    HAVING PorcentajeOcupacion > 80.0
+    ORDER BY PorcentajeOcupacion DESC;
+END$$
+
+DELIMITER ;

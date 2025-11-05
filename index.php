@@ -128,8 +128,7 @@ $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
 
         /* --- Hero Section / Banner principal --- */
         .hero-section {
-            /* APLICANDO CAMBIO: Usando fondo.jpg */
-            background-image: url('public/img/fondo.jpg'); 
+            background-image: url('public/img/portada.png'); 
             background-size: cover;
             background-position: center center;
             min-height: 600px; /* Altura generosa para el banner */

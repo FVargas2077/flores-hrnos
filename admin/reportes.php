@@ -28,22 +28,22 @@ if (isset($_GET['run_report'])) {
                 switch ($report_id) {
                     case '1':
                         $report_title = "Reporte 1: Lista de Pasajeros y Tripulantes";
-                        $stmt = $conn->prepare("CALL sp_reporte1_pasajeros_tripulantes(?, ?, ?, ?)");
+                        $stmt = $conn->prepare("CALL sp_reporte_pasajeros_tripulantes(?, ?, ?, ?)");
                         $stmt->bind_param("ssss", $p_origen, $p_destino, $p_fecha, $p_turno);
                         break;
                     case '2':
                         $report_title = "Reporte 2: Cantidad de Asientos Online";
-                        $stmt = $conn->prepare("CALL sp_reporte2_cantidad_asientos_online(?, ?, ?, ?)");
+                        $stmt = $conn->prepare("CALL sp_reporte_cantidad_asientos_online(?, ?, ?, ?)");
                         $stmt->bind_param("ssss", $p_origen, $p_destino, $p_fecha, $p_turno);
                         break;
                     case '3':
                         $report_title = "Reporte 3: Cantidad de Asientos Presencial";
-                        $stmt = $conn->prepare("CALL sp_reporte3_cantidad_asientos_presencial(?, ?, ?, ?)");
+                        $stmt = $conn->prepare("CALL sp_reporte_cantidad_asientos_presencial(?, ?, ?, ?)");
                         $stmt->bind_param("ssss", $p_origen, $p_destino, $p_fecha, $p_turno);
                         break;
                     case '4':
                         $report_title = "Reporte 4: Monto de Venta por Pisos";
-                        $stmt = $conn->prepare("CALL sp_reporte4_monto_venta_pisos(?, ?, ?, ?)");
+                        $stmt = $conn->prepare("CALL sp_reporte_monto_venta_pisos(?, ?, ?, ?)");
                         $stmt->bind_param("ssss", $p_origen, $p_destino, $p_fecha, $p_turno);
                         break;
                 }
@@ -58,7 +58,7 @@ if (isset($_GET['run_report'])) {
                 $error_msg = "Para este reporte, debe especificar una Fecha.";
             } else {
                 $report_title = "Reporte 5: Viajes con >80% de Capacidad";
-                $stmt = $conn->prepare("CALL sp_reporte5_viajes_mas_80_porciento(?)");
+                $stmt = $conn->prepare("CALL sp_reporte_viajes_alta_ocupacion(?)");
                 $stmt->bind_param("s", $p_fecha);
                 $stmt->execute();
                 $results = $stmt->get_result();

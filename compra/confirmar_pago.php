@@ -1,106 +1,92 @@
 <?php
-// compra/confirmar_pago.php
+session_start();
 include '../config/db.php';
 
-// --- Control de Acceso y Sesión ---
-if (!isset($_SESSION['id_usuario']) || !isset($_SESSION['compra_actual'])) {
+// Redirigir si no está logueado
+if (!isset($_SESSION['id_usuario'])) {
+    header('Location: ../auth/login.php');
+    exit();
+}
+
+// Validar que se recibieron los datos del formulario anterior
+if ($_SERVER['REQUEST_METHOD'] != 'POST' || !isset($_POST['asientos']) || !isset($_POST['id_viaje']) || !isset($_POST['total_pagar'])) {
+    echo "Error: Faltan datos para procesar el pago.";
     header('Location: ../index.php');
-    exit;
+    exit();
 }
 
-// Recuperar datos de la sesión
 $id_usuario = $_SESSION['id_usuario'];
-$compra = $_SESSION['compra_actual'];
-$id_viaje = $compra['id_viaje'];
-$id_asientos = $compra['id_asientos']; // Array
-$total_pagado = $compra['total'];
+$id_viaje = (int)$_POST['id_viaje'];
+$total_pagar = (float)$_POST['total_pagar'];
+$metodo_pago = $conn->real_escape_string($_POST['metodo_pago']);
+$asientos_ids = $_POST['asientos']; // Array de IDs
 
-$conn->autocommit(FALSE); // Iniciar transacción
-$errores = [];
+// IDs de reservas para el boleto
 $ids_reservas_creadas = [];
+$id_pago_grupal = null; // Para agrupar los pagos
 
-// --- 1. Crear Reservas (usando el SP) ---
-// Preparamos el statement para llamar al SP
-$stmt_reserva = $conn->prepare("CALL sp_crear_reserva(?, ?, ?, @p_id_reserva)");
+// Iniciar transacción: Si algo falla, todo se revierte.
+$conn->begin_transaction();
 
-if ($stmt_reserva === false) {
-    $errores[] = "Error al preparar el SP de reserva: " . $conn->error;
-} else {
-    foreach ($id_asientos as $id_asiento) {
-        // Asignamos los parámetros IN
-        $stmt_reserva->bind_param("iii", $id_viaje, $id_usuario, $id_asiento);
+try {
+    // 1. Crear un PAGO principal para el total
+    // (Ahora la tabla 'pagos' no tiene 'id_reserva')
+    $sql_pago = "INSERT INTO pagos (monto, metodo_pago, estado) 
+                 VALUES ($total_pagar, '$metodo_pago', 'completado')";
+    
+    if (!$conn->query($sql_pago)) {
+        throw new Exception("Error al crear el pago principal: " . $conn->error);
+    }
+    $id_pago_grupal = $conn->insert_id; // ID del pago que agrupa todo
+
+    // 2. Iterar sobre cada asiento y crear la reserva
+    foreach ($asientos_ids as $id_asiento) {
+        $id_asiento_int = (int)$id_asiento;
         
-        if (!$stmt_reserva->execute()) {
-            // El SP puede fallar si el asiento ya está ocupado (controlado por el TRIGGER)
-            $errores[] = "Error al reservar asiento $id_asiento: " . $stmt_reserva->error;
-        } else {
-            // Obtener el ID de reserva (parámetro OUT)
-            $result_sp = $conn->query("SELECT @p_id_reserva as id_reserva_creada;");
-            $id_reserva_nueva = $result_sp->fetch_assoc()['id_reserva_creada'];
+        // Llamar al SP corregido
+        $call_sp = "CALL sp_crear_reserva($id_viaje, $id_usuario, $id_asiento_int, @out_id_reserva)";
+        
+        if (!$conn->query($call_sp)) {
+             throw new Exception("Error al ejecutar sp_crear_reserva para asiento $id_asiento_int: " . $conn->error);
+        }
+        
+        // Obtener el ID de reserva devuelto por el SP
+        $res_sp = $conn->query("SELECT @out_id_reserva AS id_reserva");
+        $row_sp = $res_sp->fetch_assoc();
+        $id_reserva_nueva = $row_sp['id_reserva'];
+        
+        if ($id_reserva_nueva > 0) {
+            $ids_reservas_creadas[] = $id_reserva_nueva;
             
-            if ($id_reserva_nueva > 0) {
-                $ids_reservas_creadas[] = $id_reserva_nueva;
-            } else {
-                $errores[] = "No se pudo obtener el ID de la reserva para el asiento $id_asiento.";
+            // 3. Actualizar la reserva para vincularla al pago principal
+            // (Usando la nueva columna 'id_pago' en 'reservas')
+            $sql_update_reserva = "UPDATE reservas SET id_pago = $id_pago_grupal WHERE id_reserva = $id_reserva_nueva";
+            if (!$conn->query($sql_update_reserva)) {
+                throw new Exception("Error al actualizar la reserva $id_reserva_nueva con el ID de pago: " . $conn->error);
             }
+
+        } else {
+            throw new Exception("El SP no devolvió un ID de reserva válido para el asiento $id_asiento_int.");
         }
     }
-    $stmt_reserva->close();
-}
 
-// --- 2. Crear Pagos (Simulados) ---
-// Asumimos un solo pago por el total de todas las reservas
-$id_reserva_para_pago = $ids_reservas_creadas[0] ?? null; // Usamos la primera reserva para asociar el pago
-
-if (empty($errores) && $id_reserva_para_pago) {
-    
-    // Insertamos un PAGO general
-    // (En un sistema real, podrías crear un pago por CADA reserva)
-    $sql_pago = "INSERT INTO pagos (id_reserva, monto, metodo_pago, estado) VALUES (?, ?, 'tarjeta', 'completado')";
-    $stmt_pago = $conn->prepare($sql_pago);
-    
-    if ($stmt_pago) {
-        $stmt_pago->bind_param("id", $id_reserva_para_pago, $total_pagado);
-        if (!$stmt_pago->execute()) {
-            $errores[] = "Error al registrar el pago: " . $stmt_pago->error;
-        }
-        $stmt_pago->close();
-    } else {
-        $errores[] = "Error al preparar el pago: " . $conn->error;
-    }
-}
-
-// --- 3. Confirmar o Revertir Transacción ---
-if (empty($errores)) {
-    // ¡Éxito!
+    // Si todo salió bien, confirmar la transacción
     $conn->commit();
     
-    // Limpiar sesión de compra
-    unset($_SESSION['compra_actual']);
-    
-    // Guardar IDs de reserva para mostrar el boleto
-    $_SESSION['reservas_exitosas'] = $ids_reservas_creadas;
-    
-    // Redirigir a la página del boleto
-    header('Location: boleto.php');
-    exit;
+    // 5. Redirigir a la página de éxito (boleto)
+    // Pasamos el ID del pago grupal para que boleto.php sepa qué mostrar
+    header("Location: boleto.php?pago_id=" . $id_pago_grupal);
+    exit();
 
-} else {
-    // ¡Error! Revertir todo
+} catch (Exception $e) {
+    // Si algo falló, revertir todo
     $conn->rollback();
     
-    // Mostrar error (en una app real, una página de error)
-    echo "<h3>Ocurrió un error al procesar tu compra:</h3>";
-    echo "<ul>";
-    foreach ($errores as $e) {
-        echo "<li>" . htmlspecialchars($e) . "</li>";
-    }
-    echo "</ul>";
-    echo "<p>Por favor, <a href='../index.php'>inténtalo de nuevo</a>. (Los asientos seleccionados pueden ya no estar disponibles)</p>";
-    
-    // Limpiar sesión de compra
-    unset($_SESSION['compra_actual']);
+    // Mostrar error
+    echo "Error en la transacción: " . $e->getMessage();
+    echo "<br><a href='../index.php'>Volver al inicio</a>";
 }
 
-$conn->autocommit(TRUE); // Restaurar autocommit
+$conn->close();
+
 ?>

@@ -1,47 +1,62 @@
 <?php
-// cliente/index.php
+session_start();
 include '../config/db.php';
 
-// --- Control de Acceso ---
-// 1. Verificar si el usuario está logueado
+// Redirigir si no está logueado
 if (!isset($_SESSION['id_usuario'])) {
-    $_SESSION['error_login'] = "Debes iniciar sesión para ver tu perfil.";
     header('Location: ../auth/login.php');
-    exit;
+    exit();
 }
-
-// 2. Verificar si es cliente (o admin, aunque admin tiene su panel)
-if ($_SESSION['rol'] != 'cliente' && $_SESSION['rol'] != 'admin') {
-    // Si no es cliente, destruir sesión y redirigir
-    session_destroy();
-    $_SESSION['error_login'] = "Acceso denegado.";
-    header('Location: ../auth/login.php');
-    exit;
-}
-// --- Fin Control de Acceso ---
 
 $id_usuario = $_SESSION['id_usuario'];
 
-// 1. Obtener datos del usuario
-$sql_usuario = "SELECT * FROM usuarios WHERE id_usuario = $id_usuario";
-$user_res = $conn->query($sql_usuario);
-$usuario = $user_res->fetch_assoc();
+// 1. Obtener datos del perfil del usuario
+$usuario_sql = "SELECT nombre, apellidos, dni, email, telefono, direccion, fecha_nacimiento 
+                FROM usuarios 
+                WHERE id_usuario = $id_usuario";
+$usuario_result = $conn->query($usuario_sql);
+$usuario = $usuario_result->fetch_assoc();
 
-// 2. Obtener historial de viajes (reservas confirmadas)
-$sql_viajes = "SELECT 
-    res.fecha_reserva, res.precio_final,
-    v.fecha_salida,
-    ru.origen, ru.destino,
-    a.numero_asiento, a.piso,
-    res.estado AS estado_reserva
-FROM reservas res
-JOIN viajes v ON res.id_viaje = v.id_viaje
-JOIN rutas ru ON v.id_ruta = ru.id_ruta
-JOIN asientos a ON res.id_asiento = a.id_asiento
-WHERE res.id_usuario = $id_usuario
-ORDER BY v.fecha_salida DESC";
+// 2. Obtener historial de compras (transacciones/pagos)
+$historial_sql = "
+    SELECT 
+        p.id_pago,
+        p.monto,
+        p.fecha_pago,
+        p.metodo_pago,
+        COUNT(r.id_reserva) AS cantidad_boletos,
+        rt.origen,
+        rt.destino,
+        v.fecha_salida
+    FROM pagos p
+    JOIN reservas r ON p.id_pago = r.id_pago
+    JOIN viajes v ON r.id_viaje = v.id_viaje
+    JOIN rutas rt ON v.id_ruta = rt.id_ruta
+    WHERE r.id_usuario = $id_usuario 
+      AND p.estado = 'completado'
+    GROUP BY p.id_pago, p.monto, p.fecha_pago, p.metodo_pago, rt.origen, rt.destino, v.fecha_salida
+    ORDER BY p.fecha_pago DESC
+";
+$historial_result = $conn->query($historial_sql);
 
-$viajes_res = $conn->query($sql_viajes);
+if (!$historial_result) {
+    // Si hay un error en la consulta, muéstralo
+    echo "Error en la consulta de historial: " . $conn->error;
+    exit;
+}
+
+// 3. Revisar si hay mensajes de sesión (de éxito o error)
+$mensaje_exito = '';
+if (isset($_SESSION['mensaje_exito'])) {
+    $mensaje_exito = $_SESSION['mensaje_exito'];
+    unset($_SESSION['mensaje_exito']); // Limpiar el mensaje
+}
+
+$mensaje_error = '';
+if (isset($_SESSION['mensaje_error'])) {
+    $mensaje_error = $_SESSION['mensaje_error'];
+    unset($_SESSION['mensaje_error']); // Limpiar el mensaje
+}
 
 ?>
 <!DOCTYPE html>
@@ -49,116 +64,240 @@ $viajes_res = $conn->query($sql_viajes);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Perfil - <?php echo htmlspecialchars($usuario['nombre']); ?></title>
+    <title>Mi Perfil</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f4; }
-        nav { background-color: #004a99; padding: 1em; color: white; }
-        nav a { color: white; text-decoration: none; padding: 0 1em; }
-        .container { max-width: 1200px; margin: 2em auto; display: flex; gap: 2em; }
-        .sidebar { background-color: white; padding: 1.5em; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 250px; flex-shrink: 0; }
-        .sidebar h3 { margin-top: 0; color: #004a99; }
-        .sidebar ul { list-style: none; padding: 0; }
-        .sidebar ul li a { display: block; padding: 0.8em 0; color: #333; text-decoration: none; border-bottom: 1px solid #f0f0f0; }
-        .sidebar ul li a:hover { color: #004a99; }
-        .main-content { background-color: white; padding: 1.5em; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-grow: 1; }
-        .main-content h1 { margin-top: 0; }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; }
-        .form-group label { font-weight: bold; color: #555; }
-        .form-group input { width: 100%; padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1.5em; }
-        table th, table td { border: 1px solid #ddd; padding: 0.8em; text-align: left; }
-        table th { background-color: #f2f2f2; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #004a99; /* Azul primario */
+            border-bottom: 2px solid #004a99;
+            padding-bottom: 10px;
+        }
+        
+        /* Sección de Perfil */
+        .perfil-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .perfil-item p {
+            font-size: 1.1em;
+            color: #555;
+            margin: 8px 0;
+        }
+        .perfil-item p strong {
+            color: #333;
+            width: 150px;
+            display: inline-block;
+        }
+        .btn-edit {
+            background-color: #f0ad4e; /* Naranja */
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .btn-edit:hover {
+            background-color: #ec971f;
+        }
+
+        /* Sección de Historial */
+        .historial-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .historial-table th, .historial-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .historial-table th {
+            background-color: #f9f9f9;
+            color: #333;
+            font-weight: 700;
+        }
+        .historial-table tr:nth-child(even) {
+            background-color: #fdfdfd;
+        }
+        .btn-ver {
+            background-color: #5cb85c; /* Verde */
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        .btn-ver:hover {
+            background-color: #4cae4c;
+        }
+        .no-compras {
+            background-color: #fffde7; /* Amarillo claro */
+            border: 1px solid #fff59d;
+            color: #6d4c41;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .header-links {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .header-links a {
+            background-color: #d9534f;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        /* Mensajes de Alerta */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+        }
+        .alert-success {
+            background-color: #dff0d8;
+            border: 1px solid #c3e6cb;
+            color: #3c763d;
+        }
+        .alert-error {
+            background-color: #f2dede;
+            border: 1px solid #ebcccc;
+            color: #a94442;
+        }
+        .alert .material-icons-outlined {
+            margin-right: 10px;
+        }
+
     </style>
 </head>
 <body>
-
-    <nav>
-        <a href="../index.php"><b>Buses Flores</b></a>
-        <div style="float:right;">
-            <a href="index.php">Mi Perfil</a>
-            <a href="../auth/logout.php">Cerrar Sesión</a>
-        </div>
-    </nav>
-
     <div class="container">
-        <aside class="sidebar">
-            <h3>Mi Cuenta</h3>
-            <ul>
-                <li><a href="#perfil">Mi Perfil</a></li>
-                <li><a href="#viajes">Mis Viajes</a></li>
-                <li><a href="../index.php">Comprar Pasaje</a></li>
-                <li><a href="../auth/logout.php">Cerrar Sesión</a></li>
-            </ul>
-        </aside>
 
-        <main class="main-content">
+        <div class="header-links">
             <h1>Bienvenido, <?php echo htmlspecialchars($usuario['nombre']); ?></h1>
-            
-            <section id="perfil">
-                <h2>Mi Perfil</h2>
-                <form class="form-grid">
-                    <div class="form-group">
-                        <label>Nombres</label>
-                        <input type="text" value="<?php echo htmlspecialchars($usuario['nombre']); ?>" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label>Apellidos</label>
-                        <input type="text" value="<?php echo htmlspecialchars($usuario['apellidos']); ?>" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label>DNI</label>
-                        <input type="text" value="<?php echo htmlspecialchars($usuario['dni']); ?>" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="text" value="<?php echo htmlspecialchars($usuario['email']); ?>" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label>Teléfono</label>
-                        <input type="text" value="<?php echo htmlspecialchars($usuario['telefono']); ?>" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label>Fecha de Nacimiento</label>
-                        <input type="text" value="<?php echo htmlspecialchars($usuario['fecha_nacimiento']); ?>" disabled>
-                    </div>
-                </form>
-                <!-- Próximamente: Botón para editar perfil -->
-            </section>
-            
-            <section id="viajes" style="margin-top: 2em;">
-                <h2>Mis Viajes</h2>
-                <?php if ($viajes_res->num_rows > 0): ?>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ruta</th>
-                                <th>Fecha Salida</th>
-                                <th>Asiento</th>
-                                <th>Piso</th>
-                                <th>Precio</th>
-                                <th>Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while($viaje = $viajes_res->fetch_assoc()): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($viaje['origen']) . ' - ' . htmlspecialchars($viaje['destino']); ?></td>
-                                <td><?php echo date('d/m/Y H:i', strtotime($viaje['fecha_salida'])); ?></td>
-                                <td><?php echo htmlspecialchars($viaje['numero_asiento']); ?></td>
-                                <td><?php echo htmlspecialchars($viaje['piso']); ?></td>
-                                <td>S/ <?php echo htmlspecialchars($viaje['precio_final']); ?></td>
-                                <td><?php echo htmlspecialchars($viaje['estado_reserva']); ?></td>
-                            </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
-                <?php else: ?>
-                    <p>Aún no has comprado ningún pasaje.</p>
-                <?php endif; ?>
-            </section>
-        </main>
-    </div>
+            <div>
+                <a href="../index.php">
+                    <span class="material-icons-outlined" style="vertical-align: middle; font-size: 1.2em;">home</span>
+                    Inicio
+                </a>
+                <a href="../auth/logout.php" style="margin-left: 10px; background-color: #777;">
+                    <span class="material-icons-outlined" style="vertical-align: middle; font-size: 1.2em;">logout</span>
+                    Salir
+                </a>
+            </div>
+        </div>
 
+        <!-- Mostrar Mensajes de Sesión -->
+        <?php if ($mensaje_exito): ?>
+            <div class="alert alert-success">
+                <span class="material-icons-outlined">check_circle</span>
+                <?php echo $mensaje_exito; ?>
+            </div>
+        <?php endif; ?>
+        <?php if ($mensaje_error): ?>
+            <div class="alert alert-error">
+                <span class="material-icons-outlined">error</span>
+                <?php echo $mensaje_error; ?>
+            </div>
+        <?php endif; ?>
+
+
+        <!-- Sección de Datos Personales -->
+        <h2>Mis Datos</h2>
+        <div class="perfil-grid">
+            <div class="perfil-item">
+                <p><strong>Nombre:</strong> <?php echo htmlspecialchars($usuario['nombre'] . ' ' . $usuario['apellidos']); ?></p>
+                <p><strong>DNI:</strong> <?php echo htmlspecialchars($usuario['dni']); ?></p>
+                <p><strong>Email:</strong> <?php echo htmlspecialchars($usuario['email']); ?></p>
+            </div>
+            <div class="perfil-item">
+                <p><strong>Teléfono:</strong> <?php echo htmlspecialchars($usuario['telefono'] ?? 'No registrado'); ?></p>
+                <p><strong>Dirección:</strong> <?php echo htmlspecialchars($usuario['direccion'] ?? 'No registrada'); ?></p>
+                <p><strong>Nacimiento:</strong> <?php echo htmlspecialchars($usuario['fecha_nacimiento'] ? date('d/m/Y', strtotime($usuario['fecha_nacimiento'])) : 'No registrada'); ?></t></p>
+            </div>
+        </div>
+        <!-- BOTÓN ACTUALIZADO -->
+        <a href="editar_perfil.php" class="btn-edit">
+            <span class="material-icons-outlined" style="vertical-align: middle; font-size: 1.2em;">edit</span>
+            Editar Mis Datos
+        </a>
+
+        <br><br>
+
+        <!-- Sección de Historial de Compras -->
+        <h2>Mis Compras</h2>
+        <?php if ($historial_result->num_rows > 0): ?>
+            <div style="overflow-x: auto;"> <!-- Para responsive en tablas -->
+                <table class="historial-table">
+                    <thead>
+                        <tr>
+                            <th>ID Transacción</th>
+                            <th>Fecha Compra</th>
+                            <th>Ruta</th>
+                            <th>N° Boletos</th>
+                            <th>Total Pagado</th>
+                            <th>Método</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while ($compra = $historial_result->fetch_assoc()): ?>
+                        <tr>
+                            <td><?php echo str_pad($compra['id_pago'], 6, '0', STR_PAD_LEFT); ?></td>
+                            <td><?php echo date('d/m/Y H:i', strtotime($compra['fecha_pago'])); ?></td>
+                            <td>
+                                <strong><?php echo htmlspecialchars($compra['origen'] . ' - ' . $compra['destino']); ?></strong>
+                                <br>
+                                <small>Salida: <?php echo date('d/m/Y h:i A', strtotime($compra['fecha_salida'])); ?></small>
+                            </td>
+                            <td><?php echo $compra['cantidad_boletos']; ?></td>
+                            <td>S/ <?php echo number_format($compra['monto'], 2); ?></td>
+                            <td><?php echo htmlspecialchars(ucfirst($compra['metodo_pago'])); ?></td>
+                            <td>
+                                <a href="../compra/boleto.php?pago_id=<?php echo $compra['id_pago']; ?>" class="btn-ver">
+                                    <span class="material-icons-outlined" style="vertical-align: middle; font-size: 1.2em;">receipt_long</span>
+                                    Ver Boletos
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <div class="no-compras">
+                <p>Aún no has realizado ninguna compra.</p>
+                <a href="../index.php" style="color: #004a99; font-weight: bold;">¡Busca tu próximo viaje!</a>
+            </div>
+        <?php endif; ?>
+
+    </div>
 </body>
 </html>
-

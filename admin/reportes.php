@@ -10,7 +10,11 @@ $report_id = $_GET['report_id'] ?? '1';
 $p_origen = $_GET['origen'] ?? '';
 $p_destino = $_GET['destino'] ?? '';
 $p_fecha = $_GET['fecha'] ?? date('Y-m-d');
-$p_turno = $_GET['turno'] ?? '';
+// --- CORREGIDO ---
+// Asegurarse que el turno tenga un valor válido, ej: '00:00' si está vacío
+$p_turno = $_GET['turno'] ?? date('H:i');
+if(empty($p_turno)) $p_turno = '00:00';
+
 
 $report_title = "";
 $results = null;
@@ -25,26 +29,43 @@ if (isset($_GET['run_report'])) {
             if (empty($p_origen) || empty($p_destino) || empty($p_fecha) || empty($p_turno)) {
                 $error_msg = "Para este reporte, debe especificar Origen, Destino, Fecha y Turno.";
             } else {
+                
+                // --- CORRECCIÓN 1: Combinar Fecha y Turno en un solo DATETIME ---
+                // El SP espera un DATETIME (ej: '2025-12-26 22:00:00')
+                // No podemos pasarle la fecha y la hora por separado.
+                $p_fecha_partida_completa = $p_fecha . ' ' . $p_turno;
+                // Si el turno no incluye segundos, MySQL podría necesitar que se los añadas:
+                if(strlen($p_turno) == 5) { // Si es HH:MM
+                     $p_fecha_partida_completa = $p_fecha . ' ' . $p_turno . ':00';
+                }
+
                 switch ($report_id) {
                     case '1':
                         $report_title = "Reporte 1: Lista de Pasajeros y Tripulantes";
-                        $stmt = $conn->prepare("CALL sp_reporte_pasajeros_tripulantes(?, ?, ?, ?)");
-                        $stmt->bind_param("ssss", $p_origen, $p_destino, $p_fecha, $p_turno);
+                        $stmt = $conn->prepare("CALL sp_reporte_pasajeros_tripulantes(?, ?, ?)");
+                        // --- CORRECCIÓN 1 (bind): Usamos 3 params (sss) y la fecha completa
+                        $stmt->bind_param("sss", $p_origen, $p_destino, $p_fecha_partida_completa);
                         break;
                     case '2':
                         $report_title = "Reporte 2: Cantidad de Asientos Online";
-                        $stmt = $conn->prepare("CALL sp_reporte_cantidad_asientos_online(?, ?, ?, ?)");
-                        $stmt->bind_param("ssss", $p_origen, $p_destino, $p_fecha, $p_turno);
+                        // --- CORRECCIÓN 2 (Nombre SP): 'sp_reporte_asientos_online'
+                        $stmt = $conn->prepare("CALL sp_reporte_asientos_online(?, ?, ?)");
+                        // --- CORRECCIÓN 1 (bind):
+                        $stmt->bind_param("sss", $p_origen, $p_destino, $p_fecha_partida_completa);
                         break;
                     case '3':
                         $report_title = "Reporte 3: Cantidad de Asientos Presencial";
-                        $stmt = $conn->prepare("CALL sp_reporte_cantidad_asientos_presencial(?, ?, ?, ?)");
-                        $stmt->bind_param("ssss", $p_origen, $p_destino, $p_fecha, $p_turno);
+                        // --- CORRECCIÓN 2 (Nombre SP): 'sp_reporte_asientos_presencial'
+                        $stmt = $conn->prepare("CALL sp_reporte_asientos_presencial(?, ?, ?)");
+                        // --- CORRECCIÓN 1 (bind):
+                        $stmt->bind_param("sss", $p_origen, $p_destino, $p_fecha_partida_completa);
                         break;
                     case '4':
                         $report_title = "Reporte 4: Monto de Venta por Pisos";
-                        $stmt = $conn->prepare("CALL sp_reporte_monto_venta_pisos(?, ?, ?, ?)");
-                        $stmt->bind_param("ssss", $p_origen, $p_destino, $p_fecha, $p_turno);
+                        // --- CORRECCIÓN 2 (Nombre SP): 'sp_reporte_monto_por_piso'
+                        $stmt = $conn->prepare("CALL sp_reporte_monto_por_piso(?, ?, ?)");
+                        // --- CORRECCIÓN 1 (bind):
+                        $stmt->bind_param("sss", $p_origen, $p_destino, $p_fecha_partida_completa);
                         break;
                 }
                 $stmt->execute();
@@ -52,12 +73,13 @@ if (isset($_GET['run_report'])) {
                 $stmt->close();
             }
         }
-        // Reporte 5
+        // Reporte 5 (Este ya estaba bien)
         elseif ($report_id == '5') {
             if (empty($p_fecha)) {
                 $error_msg = "Para este reporte, debe especificar una Fecha.";
             } else {
                 $report_title = "Reporte 5: Viajes con >80% de Capacidad";
+                // El SP 5 sí espera solo un DATE, así que $p_fecha está bien.
                 $stmt = $conn->prepare("CALL sp_reporte_viajes_alta_ocupacion(?)");
                 $stmt->bind_param("s", $p_fecha);
                 $stmt->execute();
@@ -93,13 +115,16 @@ if (isset($_GET['run_report'])) {
             </select>
         </div>
 
-        <!-- Inputs para Reportes 1-4 -->
         <div id="inputs_report_1_4" class="form-grid" style="display: <?php echo in_array($report_id, ['1', '2', '3', '4']) ? 'grid' : 'none'; ?>;">
             <div class="form-group">
                 <label for="origen">Origen</label>
                 <select id="origen" name="origen" class="form-control">
                     <option value="">Seleccione origen...</option>
-                    <?php while($r = $origenes_result->fetch_assoc()): ?>
+                    <?php 
+                    // Resetear el puntero del resultado por si se usó antes
+                    $origenes_result->data_seek(0);
+                    while($r = $origenes_result->fetch_assoc()): 
+                    ?>
                         <option value="<?php echo htmlspecialchars($r['origen']); ?>" <?php echo $p_origen == $r['origen'] ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($r['origen']); ?>
                         </option>
@@ -110,7 +135,11 @@ if (isset($_GET['run_report'])) {
                 <label for="destino">Destino</label>
                 <select id="destino" name="destino" class="form-control">
                     <option value="">Seleccione destino...</option>
-                    <?php while($r = $destinos_result->fetch_assoc()): ?>
+                    <?php 
+                    // Resetear el puntero
+                    $destinos_result->data_seek(0);
+                    while($r = $destinos_result->fetch_assoc()): 
+                    ?>
                         <option value="<?php echo htmlspecialchars($r['destino']); ?>" <?php echo $p_destino == $r['destino'] ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($r['destino']); ?>
                         </option>
@@ -123,12 +152,9 @@ if (isset($_GET['run_report'])) {
             </div>
         </div>
 
-        <!-- Input para Reporte 5 (comparte el de fecha) -->
         <div id="inputs_report_5" class="form-grid" style="display: <?php echo $report_id == '5' ? 'grid' : 'none'; ?>;">
-            <!-- Este reporte solo necesita la fecha, que está abajo -->
-        </div>
+            </div>
 
-        <!-- Input de Fecha (Común a todos) -->
         <div class="form-grid" style="grid-template-columns: 1fr 3fr;">
              <div class="form-group">
                 <label for="fecha">Fecha Partida</label>
@@ -142,7 +168,6 @@ if (isset($_GET['run_report'])) {
     </form>
 </div>
 
-<!-- Zona de Resultados -->
 <?php if (isset($_GET['run_report'])): ?>
 <div class="card">
     <h3 class="card-header"><?php echo htmlspecialchars($report_title); ?></h3>
@@ -177,6 +202,8 @@ if (isset($_GET['run_report'])) {
         </table>
     <?php elseif ($results): ?>
         <div class="alert">No se encontraron resultados para los parámetros seleccionados.</div>
+    <?php else: ?>
+        <div class="alert danger">Ocurrió un error al procesar la solicitud o $results es nulo.</div>
     <?php endif; ?>
     
     <?php
@@ -198,6 +225,8 @@ function toggleReportInputs() {
         document.getElementById('inputs_report_5').style.display = 'grid';
     }
 }
+// Ejecutar al cargar la página por si vienes con parámetros GET
+toggleReportInputs();
 </script>
 
 <?php include 'includes/admin_footer.php'; ?>

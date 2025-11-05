@@ -309,32 +309,21 @@ CREATE PROCEDURE sp_crear_reserva(
     OUT p_id_reserva INT
 )
 BEGIN
-    DECLARE v_precio_base DECIMAL(10,2);
-    DECLARE v_factor_asiento DECIMAL(3,2);
+    DECLARE v_precio_asiento DECIMAL(10,2);
     
-    -- Obtener precio base de la ruta
-    SELECT r.precio_base INTO v_precio_base
-    FROM viajes v
-    JOIN rutas r ON v.id_ruta = r.id_ruta
-    WHERE v.id_viaje = p_id_viaje;
-    
-    -- Obtener factor de precio según tipo de asiento
-    SELECT 
-        CASE tipo
-            WHEN 'normal' THEN 1.0
-            WHEN 'vip' THEN 1.3
-            WHEN 'premium' THEN 1.5
-        END INTO v_factor_asiento
+    -- Corregido: Obtener el precio directamente de la tabla de asientos
+    SELECT precio INTO v_precio_asiento
     FROM asientos
     WHERE id_asiento = p_id_asiento;
     
-    -- Crear la reserva
-    INSERT INTO reservas (id_viaje, id_usuario, id_asiento, precio_final)
-    VALUES (p_id_viaje, p_id_usuario, p_id_asiento, v_precio_base * v_factor_asiento);
+    -- Crear la reserva con el precio correcto
+    INSERT INTO reservas (id_viaje, id_usuario, id_asiento, precio_final, estado)
+    VALUES (p_id_viaje, p_id_usuario, p_id_asiento, v_precio_asiento, 'confirmada');
     
+    -- Obtener el ID de la reserva recién creada
     SET p_id_reserva = LAST_INSERT_ID();
     
-    -- Actualizar estado del asiento
+    -- Actualizar estado del asiento (esto ya estaba bien)
     UPDATE asientos SET estado = FALSE WHERE id_asiento = p_id_asiento;
 END //
 DELIMITER ;

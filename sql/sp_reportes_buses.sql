@@ -1,12 +1,3 @@
--- sql/sp_reportes_buses.sql
---
--- VERSIÓN CORREGIDA
---
--- Ejecuta este archivo en tu base de datos `db_buses`.
--- Corrige los JOIN para que coincidan con el schema de `fix_schema_pagos.sql`
--- (reservas.id_pago -> pagos.id_pago)
--- También ajusta los SP 1-4 para recibir un DATETIME como p_fecha_partida.
-
 USE db_buses;
 
 DELIMITER $$

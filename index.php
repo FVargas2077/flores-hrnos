@@ -2,19 +2,55 @@
 // ... (código PHP inicial sin cambios) ...
 include 'config/db.php';
 
-// Obtener orígenes y destinos para los selectores
-$origenes_query = $conn->query("SELECT DISTINCT origen FROM rutas ORDER BY origen ASC");
-$destinos_query = $conn->query("SELECT DISTINCT destino FROM rutas ORDER BY destino ASC");
-
+// --- INICIO DE MODIFICACIÓN ---
+// Inicializamos las variables como arrays vacíos
 $origenes = [];
-while($row = $origenes_query->fetch_assoc()){
-    $origenes[] = $row['origen'];
-}
-
 $destinos = [];
-while($row = $destinos_query->fetch_assoc()){
-    $destinos[] = $row['destino'];
-}
+$resultados_viajes = null;
+$error_busqueda = null;
+
+// Solo intentamos hacer consultas SI la conexión fue exitosa
+if ($conn) {
+    // Obtener orígenes y destinos para los selectores
+    $origenes_query = $conn->query("SELECT DISTINCT origen FROM rutas ORDER BY origen ASC");
+    $destinos_query = $conn->query("SELECT DISTINCT destino FROM rutas ORDER BY destino ASC");
+
+    if ($origenes_query) {
+        while ($row = $origenes_query->fetch_assoc()) {
+            $origenes[] = $row['origen'];
+        }
+    }
+    
+    if ($destinos_query) {
+        while ($row = $destinos_query->fetch_assoc()) {
+            $destinos[] = $row['destino'];
+        }
+    }
+
+    // --- Lógica de búsqueda (si se envió el formulario) ---
+    if (isset($_GET['origen']) && isset($_GET['destino']) && isset($_GET['fecha_ida'])) {
+        $origen = $conn->real_escape_string($_GET['origen']);
+        $destino = $conn->real_escape_string($_GET['destino']);
+        $fecha = $conn->real_escape_string($_GET['fecha_ida']);
+
+        $sql = "SELECT vvp.*, vvp.`N° Viaje` as id_viaje FROM v_viajes_programados AS vvp
+                JOIN viajes AS v ON vvp.`N° Viaje` = v.id_viaje
+                WHERE vvp.origen = '$origen' 
+                  AND vvp.destino = '$destino' 
+                  AND DATE(v.fecha_salida) = '$fecha'
+                  AND vvp.estado = 'programado'";
+        
+        $resultados_viajes = $conn->query($sql);
+
+        if (!$resultados_viajes) {
+            // Guardar error si la consulta SQL falla
+            $error_busqueda = "Error en la consulta: " . $conn->error;
+        }
+    }
+    // --- Fin lógica de búsqueda ---
+
+} 
+// --- FIN DE MODIFICACIÓN ---
 
 // Obtener valores previos si se realizó una búsqueda
 $selected_origen = $_GET['origen'] ?? '';
@@ -276,6 +312,15 @@ $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        /* --- MODIFICACIÓN: Estilo para error de DB --- */
+        .db-error {
+            text-align: center;
+            padding: 2em;
+            background-color: #f8d7da; /* Rojo pálido */
+            border: 1px solid #f5c6cb;
+            color: #721c24; /* Rojo oscuro */
+            border-radius: 8px;
         }
 
         /* --- Secciones de Servicios y Calidad --- */
@@ -569,6 +614,7 @@ $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
                                 <?php echo htmlspecialchars($or); ?>
                             </option>
                         <?php endforeach; ?>
+                        <!-- Si $origenes está vacío (por error de BD), este <select> simplemente estará vacío -->
                     </select>
                 </div>
                 <div>
@@ -598,38 +644,52 @@ $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
     <!-- Sección de Resultados de Búsqueda -->
     <section id="results" class="search-results-container">
         <?php
-        if (isset($_GET['origen']) && isset($_GET['destino']) && isset($_GET['fecha_ida'])) {
-            $origen = $conn->real_escape_string($_GET['origen']);
-            $destino = $conn->real_escape_string($_GET['destino']);
-            $fecha = $conn->real_escape_string($_GET['fecha_ida']);
+        // --- INICIO DE MODIFICACIÓN ---
 
-            $sql = "SELECT vvp.*, vvp.`N° Viaje` as id_viaje FROM v_viajes_programados AS vvp
-                    JOIN viajes AS v ON vvp.`N° Viaje` = v.id_viaje
-                    WHERE vvp.origen = '$origen' 
-                      AND vvp.destino = '$destino' 
-                      AND DATE(v.fecha_salida) = '$fecha'
-                      AND vvp.estado = 'programado'";
+        // 1. Primero, revisamos si hubo un error de conexión
+        if ($db_connection_error) {
+            echo "<div class='db-error'>";
+            echo "<h3>Error de Conexión</h3>";
+            echo "<p>No se pudo conectar a la base de datos. Por favor, inténtelo más tarde.</p>";
+            // Opcional: mostrar el error técnico (solo para depuración)
+            // echo "<p><small>" . htmlspecialchars($db_connection_error) . "</small></p>";
+            echo "</div>";
+        } 
+        
+        // 2. Si no hay error de conexión, revisamos si se hizo una búsqueda
+        elseif (isset($_GET['origen']) && isset($_GET['destino']) && isset($_GET['fecha_ida'])) {
             
-            $result = $conn->query($sql);
-            
-            echo "<h2>Viajes disponibles para $origen - $destino el " . date('d/m/Y', strtotime($fecha)) . "</h2>";
-            
-            if ($result && $result->num_rows > 0) {
-                while($viaje = $result->fetch_assoc()) {
-                    echo "<div class='viaje-card'>";
-                    echo "<div><strong>Servicio</strong><span>" . htmlspecialchars($viaje['Servicio']) . "</span></div>";
-                    echo "<div><strong>Hora Salida</strong><span>" . htmlspecialchars($viaje['Salida']) . "</span></div>";
-                    echo "<div><strong>Bus</strong><span>" . htmlspecialchars($viaje['Unidad']) . "</span></div>"; // Cambiado de 'Bus' a 'Unidad'
-                    echo "<div><strong>Precios desde</strong><span>" . htmlspecialchars($viaje['Precio_Piso1']) . "</span></div>";
-                    echo "<div><a href='compra/seleccionar_asientos.php?viaje=" . $viaje['id_viaje'] . "' class='buy-button'>Comprar</a></div>";
-                    echo "</div>";
-                }
-            } else {
-                echo "<div class='no-results'><p>No se encontraron viajes para la ruta y fecha seleccionadas.</p></div>";
-                // Opcional: imprimir error de SQL si existe
-                // if (!$result) { echo "<p>Error en la consulta: " . $conn->error . "</p>"; }
+            // 3. Revisamos si hubo un error específico en la consulta de búsqueda
+            if ($error_busqueda) {
+                echo "<div class='no-results'>";
+                echo "<p>Ocurrió un error al realizar la búsqueda.</p>";
+                // echo "<p><small>" . htmlspecialchars($error_busqueda) . "</small></p>";
+                echo "</div>";
             }
+            // 4. Si la consulta fue exitosa ($resultados_viajes no es nulo)
+            elseif ($resultados_viajes) {
+                echo "<h2>Viajes disponibles para $selected_origen - $selected_destino el " . date('d/m/Y', strtotime($selected_fecha_ida)) . "</h2>";
+
+                if ($resultados_viajes->num_rows > 0) {
+                    while($viaje = $resultados_viajes->fetch_assoc()) {
+                        echo "<div class='viaje-card'>";
+                        echo "<div><strong>Servicio</strong><span>" . htmlspecialchars($viaje['Servicio']) . "</span></div>";
+                        echo "<div><strong>Hora Salida</strong><span>" . htmlspecialchars($viaje['Salida']) . "</span></div>";
+                        echo "<div><strong>Bus</strong><span>" . htmlspecialchars($viaje['Unidad']) . "</span></div>"; // Cambiado de 'Bus' a 'Unidad'
+                        echo "<div><strong>Precios desde</strong><span>" . htmlspecialchars($viaje['Precio_Piso1']) . "</span></div>";
+                        echo "<div><a href='compra/seleccionar_asientos.php?viaje=" . $viaje['id_viaje'] . "' class='buy-button'>Comprar</a></div>";
+                        echo "</div>";
+                    }
+                } else {
+                    echo "<div class='no-results'><p>No se encontraron viajes para la ruta y fecha seleccionadas.</p></div>";
+                }
+            }
+            // 5. (Opcional) Si no se ha buscado nada, no se muestra nada.
+            // else {
+            //    echo "<p>Inicie una búsqueda para ver los resultados.</p>";
+            // }
         }
+        // --- FIN DE MODIFICACIÓN ---
         ?>
     </section>
 

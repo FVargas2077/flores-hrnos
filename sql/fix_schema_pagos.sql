@@ -1,4 +1,4 @@
-USE db_buses;
+USE u914095763_g7;
 
 -- 1. Quitar la llave foránea de la tabla 'pagos'
 -- (Necesitamos quitarla para poder borrar la columna)

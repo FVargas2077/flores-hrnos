@@ -1,6 +1,6 @@
 -- Crear la base de datos
-CREATE DATABASE IF NOT EXISTS db_buses;
-USE db_buses;
+CREATE DATABASE IF NOT EXISTS u914095763_g7;
+USE u914095763_g7;
 
 -- Tabla de Roles
 CREATE TABLE roles (

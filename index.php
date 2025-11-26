@@ -6,33 +6,36 @@ error_reporting(E_ALL);
 
 include 'config/db.php';
 
-if ($conn->connect_error) {
-    die("Error de conexión: " . $conn->connect_error);
-}
-
-$origenes_query = $conn->query("SELECT DISTINCT origen FROM rutas ORDER BY origen ASC");
-if (!$origenes_query) {
-    die("Error en consulta de orígenes: " . $conn->error);
-}
-
-$destinos_query = $conn->query("SELECT DISTINCT destino FROM rutas ORDER BY destino ASC");
-if (!$destinos_query) {
-    die("Error en consulta de destinos: " . $conn->error);
-}
-
+// Inicializamos variables vacías por defecto para que el HTML no falle
 $origenes = [];
-while($row = $origenes_query->fetch_assoc()){
-    $origenes[] = $row['origen'];
-}
-
 $destinos = [];
-while($row = $destinos_query->fetch_assoc()){
-    $destinos[] = $row['destino'];
-}
-
 $selected_origen = $_GET['origen'] ?? '';
 $selected_destino = $_GET['destino'] ?? '';
 $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
+
+// SOLUCIÓN: Solo intentamos consultar la BD si la conexión ($conn) existe y es válida
+if ($conn) {
+    // 1. Cargar Orígenes
+    $origenes_query = $conn->query("SELECT DISTINCT origen FROM rutas ORDER BY origen ASC");
+    if ($origenes_query) {
+        while($row = $origenes_query->fetch_assoc()){
+            $origenes[] = $row['origen'];
+        }
+    }
+
+    // 2. Cargar Destinos
+    $destinos_query = $conn->query("SELECT DISTINCT destino FROM rutas ORDER BY destino ASC");
+    if ($destinos_query) {
+        while($row = $destinos_query->fetch_assoc()){
+            $destinos[] = $row['destino'];
+        }
+    }
+} else {
+    // Opcional: Puedes definir valores 'dummy' aquí si quieres probar la interfaz sin BD
+    // $origenes = ['LIMA', 'AREQUIPA (Offline)'];
+    // $destinos = ['TACNA', 'CUSCO (Offline)'];
+}
+
 ?>
 
 <!DOCTYPE html>

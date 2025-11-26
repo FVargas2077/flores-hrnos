@@ -1,187 +1,347 @@
-.form-busqueda {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin: 20px 0;
+:root {
+    --primary-blue: #004a99;
+    --secondary-red: #d9534f;
+    --light-grey: #f4f4f4;
+    --dark-grey: #333;
+    --text-color: #555;
+    --header-height: 80px;
 }
-.form-busqueda label {
-  font-weight: bold;
+
+body {
+    font-family: 'Roboto', Arial, sans-serif;
+    margin: 0;
+    background-color: var(--light-grey);
+    color: var(--text-color);
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
-.form-busqueda select,
-.form-busqueda input[type="date"] {
-  padding: 6px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+
+a {
+    text-decoration: none;
+    color: var(--primary-blue);
+    transition: color 0.3s;
 }
-.form-busqueda button {
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
+
+a:hover {
+    text-decoration: underline;
 }
+
+/* --- Header Top (Barra Azul Superior) --- */
+.header-top {
+    background-color: var(--primary-blue);
+    color: white;
+    padding: 0.5em 0;
+    font-size: 0.9em;
+}
+
+.header-top-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1em;
+}
+
+.header-top-content .left a,
+.header-top-content .right a {
+    color: white;
+    margin: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.header-top-content .icon {
+    margin-right: 5px;
+    font-size: 1.1em;
+}
+
+/* --- Main Navbar (Logos y Enlaces) --- */
+.main-header {
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: var(--header-height);
+    padding: 0 1em;
+}
+
+.navbar-logo {
+    height: 60px;
+    width: auto;
+}
+
+.navbar-links a {
+    color: var(--dark-grey);
+    padding: 0 1em;
+    font-weight: bold;
+}
+
+.navbar-links a:hover {
+    color: var(--primary-blue);
+}
+
+/* --- Contenedor Principal --- */
+.main-content {
+    flex: 1; /* Empuja el footer hacia abajo */
+    width: 100%;
+}
+
 .contenedor-viajes {
-  padding: 20px;
-  max-width: 1000px;
-  margin: auto;
+    max-width: 1200px;
+    margin: 2em auto;
+    padding: 0 1em;
 }
 
-.resultados-scroll {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: center;
+.contenedor-viajes h2 {
+    color: var(--primary-blue);
+    text-align: center;
+    margin-bottom: 1.5em;
+    font-size: 2em;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 0.5em;
 }
 
-.tarjeta-viaje {
-  background-color: #f9f9f9;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 16px;
-  width: 300px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease;
+/* --- Tarjetas de Viaje (Estilo Main) --- */
+.viaje-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 1.5em;
+    padding: 1.5em;
+    display: grid;
+    grid-template-columns: 2fr 2fr 1.5fr 1fr 1.5fr;
+    gap: 1em;
+    align-items: center;
+    transition: transform 0.2s ease;
 }
 
-.tarjeta-viaje:hover {
-  transform: scale(1.02);
+.viaje-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
-.tarjeta-viaje h3 {
-  margin-top: 0;
-  color: #d32f2f;
-  font-size: 18px;
+.viaje-card div {
+    padding: 0.5em 0;
+    border-right: 1px solid #eee;
+    text-align: center;
 }
 
-.tarjeta-viaje p {
-  margin: 6px 0;
-  font-size: 14px;
+.viaje-card div:first-child {
+    text-align: left;
+    border-right: 1px solid #eee;
+}
+
+.viaje-card div:last-child {
+    border-right: none;
+}
+
+.viaje-card strong {
+    color: var(--primary-blue);
+    display: block;
+    margin-bottom: 0.3em;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.viaje-card span {
+    font-size: 1.1em;
+    color: var(--dark-grey);
+    font-weight: 500;
 }
 
 .btn-comprar {
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 10px;
-  width: 100%;
-  font-weight: bold;
+    background-color: var(--secondary-red);
+    color: white;
+    padding: 0.8em 1.5em;
+    border-radius: 5px;
+    display: inline-block;
+    text-align: center;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    text-decoration: none;
+    width: 100%;
+}
+
+.btn-comprar:hover {
+    background-color: #c9302c;
 }
 
 .no-results {
-  text-align: center;
-  padding: 40px;
-  font-size: 16px;
-  color: #555;
+    text-align: center;
+    padding: 3em;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    color: #777;
+    font-size: 1.2em;
 }
 
-/* Header negro */
-.top-header {
-  position: fixed;       /* se pega arriba */
-  top: 0;
-  left: 0;
-  right: 0;              /* asegura que cubra todo el ancho */
-  width: 100vw;          /* ocupa todo el viewport horizontal */
-  height: 1.35cm;           /* un poco más alto que 1.5cm */
-  background-color: #000; /* negro */
-  color: #fff;           /* texto blanco */
-  display: flex;
-  align-items: center;
-  margin: 0;             /* elimina separación */
-  padding: 0;
-  z-index: 1000;
+/* --- Secciones Informativas (Servicios, Compra Segura) --- */
+.info-grid-section {
+    background-color: white;
+    padding: 3em 1em;
+    margin-top: 2em;
+    border-top: 1px solid #eee;
 }
 
-/* Contenido dentro del header */
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-left: 5cm;      /* separación desde borde izquierdo */
+.info-container {
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-/* Texto de contacto */
-.contact-text {
-  color: #fff;
-  font-size: 14px;
-  font-weight: bold;
+.info-container h3 {
+    color: var(--primary-blue);
+    text-align: center;
+    font-size: 1.8em;
+    margin-bottom: 1.5em;
 }
 
-/* Íconos sociales */
-.social-icons a img {
-  width: 20px;
-  height: 20px;
-  display: inline-block;
-  filter: brightness(0) invert(1); /* convierte logos a blanco */
-  transition: transform 0.2s ease;
+.grid-3-col {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2em;
 }
 
-.social-icons a img:hover {
-  transform: scale(1.2);
+.info-item {
+    text-align: center;
+    padding: 1.5em;
+    border-radius: 8px;
+    background-color: var(--light-grey);
+    transition: transform 0.3s;
 }
 
-/*barra secundaria*/
-.barra-secundaria {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1.2cm; /* bajamos un poco más la barra */
-  padding: 0 2cm;
+.info-item:hover {
+    transform: translateY(-5px);
 }
 
-.barra-izquierda {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-left: 3cm; /* movemos el logo más a la izquierda */
+.info-item h4 {
+    color: var(--dark-grey);
+    margin-bottom: 0.5em;
+    font-size: 1.2em;
 }
 
-
-
-/* Logo reducido un 15% */
-.logo-secundario {
-  height: 51px; /* antes 60px → 60 - 15% = 51 */
-  vertical-align: middle;
+.info-item p {
+    font-size: 0.95em;
+    color: #666;
 }
 
-/* Ícono de reloj aumentado un 15% */
-.reloj-icono {
-  color: #333;
-  font-size: 18.4px; /* antes 16px → 16 + 15% = 18.4 */
-  margin-left: 8px;
+.info-icon {
+    font-size: 2.5em;
+    color: var(--primary-blue);
+    margin-bottom: 0.5em;
 }
 
-/* Texto del contador aumentado un 15% */
-.contador-tiempo {
-  font-size: 16.1px; /* antes 14px → 14 + 15% = 16.1 */
-  font-weight: bold;
-  color: #333;
+/* --- Footer --- */
+.main-footer {
+    background-color: #1a1a1a;
+    color: #ccc;
+    padding: 3em 1em;
+    font-size: 0.9em;
+    margin-top: auto; /* Push footer to bottom if content is short */
 }
 
-
-.barra-derecha {
-  display: flex;
-  gap: 12px;
-  margin-right: 2cm;
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2em;
 }
 
-
-/* Botones aumentados un 15% */
-.btn-secundario {
-  background-color: #1976d2;
-  color: white;
-  padding: 6.9px 13.8px; /* antes 6px 12px → +15% */
-  border-radius: 4px;
-  text-decoration: none;
-  font-weight: bold;
-  font-size: 14.95px; /* antes 13px → +15% */
-  transition: background-color 0.2s ease;
+.footer-logo {
+    width: 150px;
+    margin-bottom: 1em;
+    filter: brightness(0) invert(1); /* Hace el logo blanco si es negro/color */
 }
 
-.btn-secundario:hover {
-  background-color: #0d47a1;
+.footer-section h3 {
+    color: white;
+    margin-bottom: 1em;
+    font-size: 1.2em;
+    border-left: 3px solid var(--secondary-red);
+    padding-left: 10px;
 }
 
+.footer-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-section ul li {
+    margin-bottom: 0.8em;
+}
+
+.footer-section ul li a {
+    color: #ccc;
+    text-decoration: none;
+}
+
+.footer-section ul li a:hover {
+    color: white;
+}
+
+.footer-bottom {
+    background-color: #0d0d0d;
+    color: #888;
+    text-align: center;
+    padding: 1em 0;
+    margin-top: 3em;
+    font-size: 0.8em;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .viaje-card {
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5em;
+    }
+    .viaje-card div {
+        border-right: none;
+        border-bottom: 1px solid #eee;
+    }
+    .viaje-card div:last-child {
+        grid-column: 1 / -1;
+        border-bottom: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .header-top-content {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .navbar-content {
+        flex-direction: column;
+        height: auto;
+        padding: 10px;
+    }
+    .navbar-links {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .viaje-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    .viaje-card div:first-child {
+        text-align: center;
+    }
+}

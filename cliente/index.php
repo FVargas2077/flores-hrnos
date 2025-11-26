@@ -1,8 +1,9 @@
 <?php
+session_start();
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-session_start();
+
 include '../config/db.php';
 
 // Redirigir si no está logueado
@@ -20,8 +21,9 @@ $usuario_sql = "SELECT nombre, apellidos, dni, email, telefono, fecha_nacimiento
 $usuario_result = $conn->query($usuario_sql);
 $usuario = $usuario_result->fetch_assoc();
 
-// 2. Obtener historial de compras (transacciones/pagos) Para futura adaptacion cuando se implementen pagos.
-/*$historial_sql = "
+// 2. Obtener historial de compras (CORREGIDO)
+// Esta consulta une la tabla pagos con reservas para obtener el monto y fecha real
+$historial_sql = "
     SELECT 
         p.id_pago,
         p.monto,
@@ -39,19 +41,6 @@ $usuario = $usuario_result->fetch_assoc();
       AND p.estado = 'completado'
     GROUP BY p.id_pago, p.monto, p.fecha_pago, p.metodo_pago, rt.origen, rt.destino, v.fecha_salida
     ORDER BY p.fecha_pago DESC
-";*/
-$historial_sql = "
-    SELECT 
-        COUNT(r.id_reserva) AS cantidad_boletos,
-        rt.origen,
-        rt.destino,
-        v.fecha_salida
-    FROM reservas r
-    JOIN viajes v ON r.id_viaje = v.id_viaje
-    JOIN rutas rt ON v.id_ruta = rt.id_ruta
-    WHERE r.id_usuario = $id_usuario
-    GROUP BY rt.origen, rt.destino, v.fecha_salida
-    ORDER BY v.fecha_salida DESC
 ";
 
 $historial_result = $conn->query($historial_sql);
@@ -259,7 +248,7 @@ if (isset($_SESSION['mensaje_error'])) {
                 <p><strong>Nacimiento:</strong> <?php echo htmlspecialchars($usuario['fecha_nacimiento'] ? date('d/m/Y', strtotime($usuario['fecha_nacimiento'])) : 'No registrada'); ?></t></p>
             </div>
         </div>
-        <!-- BOTÓN ACTUALIZADO -->
+        <!-- BOTÓN EDITAR -->
         <a href="editar_perfil.php" class="btn-edit">
             <span class="material-icons-outlined" style="vertical-align: middle; font-size: 1.2em;">edit</span>
             Editar Mis Datos
@@ -286,18 +275,19 @@ if (isset($_SESSION['mensaje_error'])) {
                     <tbody>
                         <?php while ($compra = $historial_result->fetch_assoc()): ?>
                         <tr>
-                            <td><?php echo str_pad($compra['id_pago'], 6, '0', STR_PAD_LEFT); ?></td>
-                            <td><?php echo date('d/m/Y H:i', strtotime($compra['fecha_pago'])); ?></td>
+                            <!-- Validamos que existan las claves para evitar warnings -->
+                            <td><?php echo str_pad($compra['id_pago'] ?? 0, 6, '0', STR_PAD_LEFT); ?></td>
+                            <td><?php echo isset($compra['fecha_pago']) ? date('d/m/Y H:i', strtotime($compra['fecha_pago'])) : 'N/A'; ?></td>
                             <td>
                                 <strong><?php echo htmlspecialchars($compra['origen'] . ' - ' . $compra['destino']); ?></strong>
                                 <br>
-                                <small>Salida: <?php echo date('d/m/Y h:i A', strtotime($compra['fecha_salida'])); ?></small>
+                                <small>Salida: <?php echo isset($compra['fecha_salida']) ? date('d/m/Y h:i A', strtotime($compra['fecha_salida'])) : ''; ?></small>
                             </td>
                             <td><?php echo $compra['cantidad_boletos']; ?></td>
-                            <td>S/ <?php echo number_format($compra['monto'], 2); ?></td>
-                            <td><?php echo htmlspecialchars(ucfirst($compra['metodo_pago'])); ?></td>
+                            <td>S/ <?php echo number_format($compra['monto'] ?? 0, 2); ?></td>
+                            <td><?php echo htmlspecialchars(ucfirst($compra['metodo_pago'] ?? 'Desconocido')); ?></td>
                             <td>
-                                <a href="../compra/boleto.php?pago_id=<?php echo $compra['id_pago']; ?>" class="btn-ver">
+                                <a href="../compra/boleto.php?pago_id=<?php echo $compra['id_pago'] ?? 0; ?>" class="btn-ver">
                                     <span class="material-icons-outlined" style="vertical-align: middle; font-size: 1.2em;">receipt_long</span>
                                     Ver Boletos
                                 </a>

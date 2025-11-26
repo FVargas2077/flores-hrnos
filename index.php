@@ -81,6 +81,8 @@ $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
 
         /* --- Header Top --- */
         .header-top {
+            position: relative;
+            z-index: 2000;
             background-color: var(--primary-blue);
             color: white;
             padding: 0.5em 0;
@@ -522,7 +524,7 @@ $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
 <body>
 
    <!-- Header Top -->
-<div class="header-top">
+<!--<div class="header-top">
     <div class="header-top-content">
         <div class="left">
             <a href="#"><span class="material-symbols-outlined icon">desktop_windows</span> Mis compras por internet</a>
@@ -544,8 +546,8 @@ $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
 </div>
 
 
-    <!-- Navbar -->
-<header class="main-header">
+    <-- Navbar -->
+<!--<header class="main-header">
     <div class="navbar-content">
         <a href="index.php">
             <img src="public/img/logo.png" alt="Logo Flores Hnos" class="navbar-logo">
@@ -556,7 +558,173 @@ $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
             <a href="#travel">Destinos</a>
         </div>
     </div>
-</header>
+</header>-->
+
+<!-- INICIO HEADER -->
+<div class="header-top">
+    <div class="header-top-content" style="align-items: center;">
+        <div class="left">
+            <a href="index.php">
+                <img src="public/img/logo.png" alt="Logo Flores Hnos" class="navbar-logo" style="margin-left: -2.5cm; height:60px; vertical-align: middle;">
+            </a>
+        </div>
+        <div class="right" style="margin-right: 2cm; margin-left: -2.5cm; display: flex; align-items: center;">
+            <a href="tel:+51014800078"><i class="fas fa-phone icon"></i> (01) 4800078</a>
+            <a href="auth/login.php"><i class="fas fa-user icon"></i> Compra tu pasaje en línea</a>
+            <a href="#documento"><i class="fas fa-file-alt icon"></i> Mi documento electrónico</a>
+            <a href="#envios"><span class="material-symbols-outlined icon">location_on</span> Seguimiento de envíos</a>
+        </div>        
+<!--<div style="position: relative; display: inline-block;">
+    <button class="hamburger" id="hamburgerBtn"
+        aria-label="Menú"
+        aria-controls="dropdown-menu"
+        aria-expanded="false">
+        ☰
+    </button>
+
+    <!- Menú desplegable ->
+    <nav id="dropdown-menu" class="dropdown hidden" aria-label="Menú secundario">
+        <a href="#services"><span class="material-symbols-outlined icon">build</span> Servicios</a>
+        <a href="#travel"><span class="material-symbols-outlined icon">map</span> Destinos</a>
+        <a href="#contacto"><span class="material-symbols-outlined icon">mail</span> Contacto</a>
+    </nav>
+</div>-->
+<div style="position: relative; display: inline-block; transform: translateX(-4cm);">
+    <button class="hamburger" id="hamburgerBtn"
+        aria-label="Menú"
+        aria-controls="dropdown-menu"
+        aria-expanded="false">
+        ☰
+    </button>
+
+    <!-- Menú desplegable -->
+    <nav id="dropdown-menu" class="dropdown hidden" aria-label="Menú secundario">
+        <a href="#services"><span class="material-symbols-outlined icon">build</span> Servicios</a>
+        <a href="#travel"><span class="material-symbols-outlined icon">map</span> Destinos</a>
+        <a href="#contacto"><span class="material-symbols-outlined icon">mail</span> Contacto</a>
+    </nav>
+</div>
+
+
+
+
+        <div class="session-buttons">
+            <?php if (isset($_SESSION['id_usuario'])): ?>
+                <?php if ($_SESSION['rol'] == 'admin'): ?>
+                    <a href="admin/dashboard.php">Panel Admin</a>
+                <?php else: ?>
+                    <a href="cliente/index.php">Mi Perfil</a>
+                <?php endif; ?>
+                <a href="auth/logout.php"><span class="material-symbols-outlined icon">logout</span> Cerrar Sesión</a>
+            <?php else: ?>
+                <a href="auth/login.php"><span class="material-symbols-outlined icon">person</span> Iniciar Sesión</a>
+                <a href="auth/register.php"><span class="material-symbols-outlined icon">person_add</span> Registrarse</a>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+
+<style>
+.hamburger {
+    position: relative; /* referencia para el menú */
+    font-size: 1.38em;
+    background: white;
+    border: none;
+    color: var(--primary-blue);
+    cursor: pointer;
+    padding: 0.35em 0.7em;
+    border-radius: 4px;
+    vertical-align: middle;
+}
+
+.dropdown {
+    position: absolute;
+    top: 100%;   /* justo debajo del botón */
+    right: 0;    /* alineado al borde derecho del botón */
+    background: var(--primary-blue);
+    border-radius: 6px;
+    padding: 0.5em;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    min-width: 160px;
+    /* clave para sobreponerse */
+    z-index: 9999;
+}
+.hamburger:hover {
+    background-color: #e6e6e6;
+}
+.session-buttons {
+    position: absolute;
+    top: 0.5em;         /* un poco debajo del borde superior */
+    right: 1cm;         /* frontera a 1 cm del borde derecho */
+    display: flex;
+    gap: 1em;           /* espacio entre botones */
+    align-items: center;
+}
+
+.session-buttons a {
+    color: white;       /* ajusta según tu paleta */
+    text-decoration: none;
+    font-size: 0.9em;
+}
+
+.session-buttons a:hover {
+    text-decoration: underline;
+}
+
+
+
+
+
+
+.dropdown a {
+    color: white;
+    padding: 0.6em 0.8em;
+    text-decoration: none;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+}
+.dropdown a:hover {
+    background: rgba(255,255,255,0.15);
+}
+.hidden { display: none; }
+
+
+</style>
+
+<script>
+(function () {
+    const btn = document.getElementById('hamburgerBtn');
+    const menu = document.getElementById('dropdown-menu');
+
+    function openMenu() {
+        menu.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+        const firstLink = menu.querySelector('a');
+        if (firstLink) firstLink.focus();
+    }
+
+    function closeMenu() {
+        menu.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleMenu() {
+        menu.classList.contains('hidden') ? openMenu() : closeMenu();
+    }
+
+    btn.addEventListener('click', toggleMenu);
+    document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target) && !btn.contains(e.target)) closeMenu();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMenu();
+    });
+})();
+</script>
 
 
     <!-- Hero Section -->
@@ -564,7 +732,7 @@ $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
     <div class="hero-content">
         <h1>Viaja por todo el Perú con Flores Hnos</h1>
         <p>Conecta con tus destinos favoritos de forma segura y cómoda.</p>
-        <form action="index.php#results" method="GET" class="trip-search-form">
+        <form action="cliente/resultados.php" method="GET" class="trip-search-form">
             <div>
                 <label for="origen">ORIGEN</label>
                 <select id="origen" name="origen" required>
@@ -597,48 +765,12 @@ $selected_fecha_ida = $_GET['fecha_ida'] ?? date('Y-m-d');
             </div>
             <button type="submit">Buscar</button>
         </form>
+
     </div>
 </section>
 
 <!-- Resultados -->
-<section id="results" class="search-results-container">
-<?php
-if (isset($_GET['origen']) && isset($_GET['destino']) && isset($_GET['fecha_ida'])) {
-    $origen = $conn->real_escape_string($_GET['origen']);
-    $destino = $conn->real_escape_string($_GET['destino']);
-    $fecha = $conn->real_escape_string($_GET['fecha_ida']);
 
-    $sql = "SELECT vvp.*, vvp.`N° Viaje` as id_viaje FROM v_viajes_programados AS vvp
-            JOIN viajes AS v ON vvp.`N° Viaje` = v.id_viaje
-            WHERE vvp.origen = '$origen' 
-              AND vvp.destino = '$destino' 
-              AND DATE(v.fecha_salida) = '$fecha'
-              AND vvp.estado = 'programado'";
-
-    $result = $conn->query($sql);
-
-    if (!$result) {
-        echo "<div class='no-results'><p>Error en la consulta de viajes: " . htmlspecialchars($conn->error) . "</p></div>";
-    } else {
-        echo "<h2>Viajes disponibles para $origen - $destino el " . date('d/m/Y', strtotime($fecha)) . "</h2>";
-
-        if ($result->num_rows > 0) {
-            while($viaje = $result->fetch_assoc()) {
-                echo "<div class='viaje-card'>";
-                echo "<div><strong>Servicio</strong><span>" . htmlspecialchars($viaje['Servicio']) . "</span></div>";
-                echo "<div><strong>Hora Salida</strong><span>" . htmlspecialchars($viaje['Salida']) . "</span></div>";
-                echo "<div><strong>Bus</strong><span>" . htmlspecialchars($viaje['Unidad']) . "</span></div>";
-                echo "<div><strong>Precios desde</strong><span>" . htmlspecialchars($viaje['Precio_Piso1']) . "</span></div>";
-                echo "<div><a href='compra/seleccionar_asientos.php?viaje=" . urlencode($viaje['id_viaje']) . "' class='buy-button'>Comprar</a></div>";
-                echo "</div>";
-            }
-        } else {
-            echo "<div class='no-results'><p>No se encontraron viajes para la ruta y fecha seleccionadas.</p></div>";
-        }
-    }
-}
-?>
-</section>
 
     <!-- Sección de Nuestros Servicios -->
     <section id="services">

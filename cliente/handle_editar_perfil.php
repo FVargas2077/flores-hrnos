@@ -21,7 +21,6 @@ $nombre = $conn->real_escape_string($_POST['nombre']);
 $apellidos = $conn->real_escape_string($_POST['apellidos']);
 $email = $conn->real_escape_string($_POST['email']);
 $telefono = $conn->real_escape_string($_POST['telefono']);
-$direccion = $conn->real_escape_string($_POST['direccion']);
 $fecha_nacimiento = $conn->real_escape_string($_POST['fecha_nacimiento']);
 
 // Validar campos vacíos
@@ -37,8 +36,7 @@ $sql_update = "UPDATE usuarios SET
                     nombre = '$nombre',
                     apellidos = '$apellidos',
                     email = '$email',
-                    telefono = '$telefono',
-                    direccion = '$direccion',
+                    telefono = '$telefono',                    
                     fecha_nacimiento = '$fecha_nacimiento'
                WHERE id_usuario = $id_usuario";
 

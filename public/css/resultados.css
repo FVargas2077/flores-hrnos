@@ -1,0 +1,187 @@
+.form-busqueda {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 20px 0;
+}
+.form-busqueda label {
+  font-weight: bold;
+}
+.form-busqueda select,
+.form-busqueda input[type="date"] {
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+.form-busqueda button {
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.contenedor-viajes {
+  padding: 20px;
+  max-width: 1000px;
+  margin: auto;
+}
+
+.resultados-scroll {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+.tarjeta-viaje {
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  width: 300px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.tarjeta-viaje:hover {
+  transform: scale(1.02);
+}
+
+.tarjeta-viaje h3 {
+  margin-top: 0;
+  color: #d32f2f;
+  font-size: 18px;
+}
+
+.tarjeta-viaje p {
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+.btn-comprar {
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+  width: 100%;
+  font-weight: bold;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+  color: #555;
+}
+
+/* Header negro */
+.top-header {
+  position: fixed;       /* se pega arriba */
+  top: 0;
+  left: 0;
+  right: 0;              /* asegura que cubra todo el ancho */
+  width: 100vw;          /* ocupa todo el viewport horizontal */
+  height: 1.35cm;           /* un poco más alto que 1.5cm */
+  background-color: #000; /* negro */
+  color: #fff;           /* texto blanco */
+  display: flex;
+  align-items: center;
+  margin: 0;             /* elimina separación */
+  padding: 0;
+  z-index: 1000;
+}
+
+/* Contenido dentro del header */
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 5cm;      /* separación desde borde izquierdo */
+}
+
+/* Texto de contacto */
+.contact-text {
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Íconos sociales */
+.social-icons a img {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  filter: brightness(0) invert(1); /* convierte logos a blanco */
+  transition: transform 0.2s ease;
+}
+
+.social-icons a img:hover {
+  transform: scale(1.2);
+}
+
+/*barra secundaria*/
+.barra-secundaria {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.2cm; /* bajamos un poco más la barra */
+  padding: 0 2cm;
+}
+
+.barra-izquierda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 3cm; /* movemos el logo más a la izquierda */
+}
+
+
+
+/* Logo reducido un 15% */
+.logo-secundario {
+  height: 51px; /* antes 60px → 60 - 15% = 51 */
+  vertical-align: middle;
+}
+
+/* Ícono de reloj aumentado un 15% */
+.reloj-icono {
+  color: #333;
+  font-size: 18.4px; /* antes 16px → 16 + 15% = 18.4 */
+  margin-left: 8px;
+}
+
+/* Texto del contador aumentado un 15% */
+.contador-tiempo {
+  font-size: 16.1px; /* antes 14px → 14 + 15% = 16.1 */
+  font-weight: bold;
+  color: #333;
+}
+
+
+.barra-derecha {
+  display: flex;
+  gap: 12px;
+  margin-right: 2cm;
+}
+
+
+/* Botones aumentados un 15% */
+.btn-secundario {
+  background-color: #1976d2;
+  color: white;
+  padding: 6.9px 13.8px; /* antes 6px 12px → +15% */
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 14.95px; /* antes 13px → +15% */
+  transition: background-color 0.2s ease;
+}
+
+.btn-secundario:hover {
+  background-color: #0d47a1;
+}
+

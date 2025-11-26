@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 session_start();
 include '../config/db.php';
 
@@ -8,17 +11,17 @@ if (!isset($_SESSION['id_usuario'])) {
     exit();
 }
 
-$id_usuario = $_SESSION['id_usuario'];
+$id_usuario = (int)$_SESSION['id_usuario'];
 
 // 1. Obtener datos del perfil del usuario
-$usuario_sql = "SELECT nombre, apellidos, dni, email, telefono, direccion, fecha_nacimiento 
+$usuario_sql = "SELECT nombre, apellidos, dni, email, telefono, fecha_nacimiento 
                 FROM usuarios 
                 WHERE id_usuario = $id_usuario";
 $usuario_result = $conn->query($usuario_sql);
 $usuario = $usuario_result->fetch_assoc();
 
-// 2. Obtener historial de compras (transacciones/pagos)
-$historial_sql = "
+// 2. Obtener historial de compras (transacciones/pagos) Para futura adaptacion cuando se implementen pagos.
+/*$historial_sql = "
     SELECT 
         p.id_pago,
         p.monto,
@@ -36,7 +39,21 @@ $historial_sql = "
       AND p.estado = 'completado'
     GROUP BY p.id_pago, p.monto, p.fecha_pago, p.metodo_pago, rt.origen, rt.destino, v.fecha_salida
     ORDER BY p.fecha_pago DESC
+";*/
+$historial_sql = "
+    SELECT 
+        COUNT(r.id_reserva) AS cantidad_boletos,
+        rt.origen,
+        rt.destino,
+        v.fecha_salida
+    FROM reservas r
+    JOIN viajes v ON r.id_viaje = v.id_viaje
+    JOIN rutas rt ON v.id_ruta = rt.id_ruta
+    WHERE r.id_usuario = $id_usuario
+    GROUP BY rt.origen, rt.destino, v.fecha_salida
+    ORDER BY v.fecha_salida DESC
 ";
+
 $historial_result = $conn->query($historial_sql);
 
 if (!$historial_result) {
@@ -238,8 +255,7 @@ if (isset($_SESSION['mensaje_error'])) {
                 <p><strong>Email:</strong> <?php echo htmlspecialchars($usuario['email']); ?></p>
             </div>
             <div class="perfil-item">
-                <p><strong>Teléfono:</strong> <?php echo htmlspecialchars($usuario['telefono'] ?? 'No registrado'); ?></p>
-                <p><strong>Dirección:</strong> <?php echo htmlspecialchars($usuario['direccion'] ?? 'No registrada'); ?></p>
+                <p><strong>Teléfono:</strong> <?php echo htmlspecialchars($usuario['telefono'] ?? 'No registrado'); ?></p>                
                 <p><strong>Nacimiento:</strong> <?php echo htmlspecialchars($usuario['fecha_nacimiento'] ? date('d/m/Y', strtotime($usuario['fecha_nacimiento'])) : 'No registrada'); ?></t></p>
             </div>
         </div>

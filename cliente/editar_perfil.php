@@ -11,7 +11,7 @@ if (!isset($_SESSION['id_usuario'])) {
 $id_usuario = $_SESSION['id_usuario'];
 
 // Obtener datos actuales del perfil
-$sql = "SELECT nombre, apellidos, dni, email, telefono, direccion, fecha_nacimiento, genero 
+$sql = "SELECT nombre, apellidos, dni, email, telefono, fecha_nacimiento, genero 
         FROM usuarios 
         WHERE id_usuario = $id_usuario";
 $result = $conn->query($sql);
@@ -165,12 +165,6 @@ if (!$usuario) {
                 <div class="form-group">
                     <label for="fecha_nacimiento">Fecha de Nacimiento</label>
                     <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" value="<?php echo htmlspecialchars($usuario['fecha_nacimiento'] ?? ''); ?>">
-                </div>
-
-                <!-- Dirección (Ancho completo) -->
-                <div class="form-group full-width">
-                    <label for="direccion">Dirección</label>
-                    <input type="text" id="direccion" name="direccion" value="<?php echo htmlspecialchars($usuario['direccion'] ?? ''); ?>">
                 </div>
 
                 <!-- Sección para Cambiar Contraseña -->

@@ -9,7 +9,7 @@ define('DB_NAME', 'u914095763_g7');  // El nombre de tu base de datos
 define('DB_PORT', '3306');      // Puerto de MySQL (Corregido a 3306)
 
 // Crear la conexión usando mysqli
-// Omitimos el puerto, ya que 3306 es el estándar
+// Omitimos el puerto, ya que 3306 es el estándar 
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
 // Verificar la conexión

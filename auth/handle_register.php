@@ -1,5 +1,6 @@
 <?php
 // auth/handle_register.php
+session_start();
 include '../config/db.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -21,16 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $fecha_nacimiento = $conn->real_escape_string($_POST['fecha_nacimiento']);
     $genero = $conn->real_escape_string($_POST['genero']);
     
-    // Asignar rol 'cliente' (id_rol = 2 según tu db_buses.sql)
-    $id_rol = 2; 
-
-    // --- ¡ADVERTENCIA DE SEGURIDAD! ---
-    // Estamos guardando la contraseña en texto plano para que coincida
-    // con tu SP de login (sp_login_usuario).
-    // En un proyecto real, NUNCA hagas esto. Deberías usar:
-    // $hash_password = password_hash($password, PASSWORD_DEFAULT);
-    // y guardar $hash_password en la BD.
-    // Y tu SP de login debería ser modificado (o no usarse para login).
+    $id_rol = 2; // Rol cliente
 
     // Verificar si el DNI o Email ya existen
     $check_sql = "SELECT * FROM usuarios WHERE dni = '$dni' OR email = '$email'";
@@ -58,16 +50,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     }
     
-    // 'ss' para string, 'i' para integer, 'd' para double
     $stmt->bind_param("issssssss", $id_rol, $nombre, $apellidos, $dni, $email, $password, $telefono, $fecha_nacimiento, $genero);
 
     if ($stmt->execute()) {
-        // Registro exitoso. Ahora, loguear al usuario
-        
-        // Llamamos al SP de login para crear la sesión
+        // Login automático
         $conn->query("SET @p_resultado = 0;");
         $conn->query("SET @p_mensaje = '';");
         $conn->query("CALL sp_login_usuario('$email', '$password', @p_resultado, @p_mensaje);");
+
+        // Limpiar resultados extra del CALL
+        while($conn->more_results() && $conn->next_result()) {;}
 
         $result_sp = $conn->query("SELECT @p_resultado as id_usuario, @p_mensaje as rol;");
         $out_params = $result_sp->fetch_assoc();
@@ -76,15 +68,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $rol = $out_params['rol'];
 
         if ($id_usuario > 0) {
-            // Login automático exitoso
             $_SESSION['id_usuario'] = $id_usuario;
             $_SESSION['rol'] = $rol;
             $_SESSION['nombre_usuario'] = $nombre . ' ' . $apellidos;
             
-            header('Location: ../cliente/index.php'); // Redirigir al dashboard del cliente
+            header('Location: ../cliente/index.php');
         } else {
-            // Hubo un error en el login post-registro (raro, pero posible)
-            $_SESSION['error_login'] = "Registro exitoso, pero falló el inicio de sesión automático. Por favor, intente ingresar manualmente.";
+            $_SESSION['error_login'] = "Registro exitoso, pero falló el inicio de sesión automático. Intente ingresar manualmente.";
             header('Location: login.php');
         }
         exit;

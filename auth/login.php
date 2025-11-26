@@ -1,4 +1,5 @@
 <?php
+session_start();
 include '../config/db.php';
 
 // Si el usuario ya está logueado, redirigirlo
